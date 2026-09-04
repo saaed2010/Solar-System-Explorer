@@ -66,7 +66,7 @@ flutter test
 
 ## Scientific data and artwork
 
-Numeric data is stored locally and uses standard NASA Solar System Exploration and NASA/IAU reference values, with approximate or variable stellar values labelled as such in the app. Visual bodies are original procedural Flutter artwork rather than external image assets, keeping the experience coherent, lightweight, and free of watermarks.
+Numeric data is stored locally and uses standard NASA Solar System Exploration and NASA/IAU reference values, with approximate or variable stellar values labelled as such in the app. In-app celestial bodies are original procedural Flutter artwork rather than external image assets, keeping the experience coherent and lightweight. The 512 px launcher artwork in `assets/branding/` was generated specifically for this project with OpenAI image generation; derived Android, Web, and Windows icon sizes are stored in their native platform folders and contain no text or watermark.
 
 The comparison engine always calculates with **diameter in kilometres**. In true-scale mode both render sizes share one linear pixels-per-kilometre scale. When a very small body falls below a visible pixel, an independent locator ring may identify its position without enlarging the physical disk. Readable mode enforces a visible minimum and always displays `NOT TO SCALE`.
 
