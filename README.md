@@ -93,7 +93,7 @@ The runtime uses the Flutter SDK and Material/Cupertino icon fonts only. No thir
 
 ## Status
 
-STEP 1 is feature-complete locally. GitHub publication is pending authentication; the local Git repository and full commit history are ready to push.
+STEP 1 is complete. The source and full commit history are published at [github.com/saaed2010/Solar-System-Explorer](https://github.com/saaed2010/Solar-System-Explorer).
 
 ## Known limits
 
