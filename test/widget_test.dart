@@ -40,6 +40,32 @@ void main() {
     expect(find.text('Open size comparison'), findsOneWidget);
   });
 
+  testWidgets('details comparison opens with a valid Material surface', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const SolarSystemApp());
+    await tester.tap(find.text('Explore'));
+    await tester.pump(const Duration(milliseconds: 450));
+
+    await tester.enterText(find.byKey(const Key('catalog-search')), 'Earth');
+    await tester.pump();
+    await tester.tap(find.text('Earth').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.drag(
+      find.byType(CustomScrollView).last,
+      const Offset(0, -700),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const Key('open-comparison')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+
+    expect(find.text('Compare worlds'), findsOneWidget);
+    expect(find.text('SAME PHYSICAL SCALE'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('readable comparison is explicitly marked not to scale', (
     tester,
   ) async {
