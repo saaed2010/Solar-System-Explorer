@@ -111,7 +111,7 @@ class _BodyPainter extends CustomPainter {
     final shortest = math.min(size.width, size.height);
     final center = Offset(size.width / 2, size.height / 2);
     // A single disk-to-widget ratio keeps scientific comparisons consistent.
-    final radius = shortest * 0.36;
+    final radius = shortest * (body.id == 'saturn' ? 0.34 : 0.355);
     final colours = body.palette.map(Color.new).toList(growable: false);
 
     if (glow) {
@@ -149,13 +149,22 @@ class _BodyPainter extends CustomPainter {
 
     canvas.save();
     canvas.clipPath(Path()..addOval(sphereRect));
-    if (body.id == 'earth') _drawEarth(canvas, center, radius);
+    _drawSurfaceGrain(canvas, center, radius, colours);
+    if (body.id == 'earth') {
+      _drawEarth(canvas, center, radius);
+      _drawClouds(canvas, center, radius);
+    }
     if (body.id == 'jupiter' || body.id == 'saturn') {
       _drawGasBands(canvas, center, radius);
     }
+    if (body.id == 'venus' || body.id == 'uranus') {
+      _drawAtmosphereBands(canvas, center, radius);
+    }
     if (body.id == 'neptune') _drawStorm(canvas, center, radius);
     if (body.id == 'mars') _drawMars(canvas, center, radius);
-    if (body.type == BodyType.moon || body.type == BodyType.dwarfPlanet) {
+    if (body.id == 'mercury' ||
+        body.type == BodyType.moon ||
+        body.type == BodyType.dwarfPlanet) {
       _drawCraters(canvas, center, radius);
     }
     if (body.isStar) _drawStarTexture(canvas, center, radius);
@@ -172,8 +181,101 @@ class _BodyPainter extends CustomPainter {
       ).createShader(sphereRect);
     canvas.drawCircle(center, radius, shade);
 
+    canvas.drawCircle(
+      center,
+      radius * 0.985,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.65, radius * 0.025)
+        ..color = colours.first.withValues(alpha: body.isStar ? 0.42 : 0.30),
+    );
+    if (body.id == 'earth' ||
+        body.id == 'venus' ||
+        body.id == 'uranus' ||
+        body.id == 'neptune') {
+      canvas.drawCircle(
+        center,
+        radius * 1.018,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(0.8, radius * 0.035)
+          ..color = colours.first.withValues(alpha: 0.22),
+      );
+    }
+
     if (body.id == 'saturn') {
       _drawRings(canvas, center, radius, colours, behind: false);
+    }
+  }
+
+  void _drawSurfaceGrain(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    List<Color> colours,
+  ) {
+    final seed = body.id.codeUnits.fold<int>(0, (value, unit) => value + unit);
+    for (var i = 0; i < 22; i++) {
+      final angle = i * 2.399 + seed * 0.013 + phase * 0.12;
+      final distance = radius * (0.12 + ((i * 37 + seed) % 78) / 100);
+      final point =
+          center + Offset(math.cos(angle), math.sin(angle)) * distance;
+      canvas.drawCircle(
+        point,
+        radius * (0.008 + (i % 4) * 0.004),
+        Paint()
+          ..color = (i.isEven ? Colors.white : colours.last).withValues(
+            alpha: body.isStar ? 0.08 : 0.045,
+          ),
+      );
+    }
+  }
+
+  void _drawClouds(Canvas canvas, Offset center, double radius) {
+    final cloud = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(0.7, radius * 0.045)
+      ..color = Colors.white.withValues(alpha: 0.24);
+    final shift = math.sin(phase * math.pi * 2) * radius * 0.1;
+    for (var i = -2; i <= 2; i++) {
+      final y = center.dy + i * radius * 0.31;
+      final halfWidth = math.sqrt(
+        math.max(0, radius * radius - math.pow(y - center.dy, 2)),
+      );
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset(center.dx + shift, y),
+          width: halfWidth * 1.45,
+          height: radius * 0.18,
+        ),
+        math.pi * (i.isEven ? 0.12 : 1.05),
+        math.pi * 0.72,
+        false,
+        cloud,
+      );
+    }
+  }
+
+  void _drawAtmosphereBands(Canvas canvas, Offset center, double radius) {
+    final band = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    for (var i = -3; i <= 3; i++) {
+      final y = center.dy + i * radius * 0.22;
+      final halfWidth = math.sqrt(
+        math.max(0, radius * radius - math.pow(y - center.dy, 2)),
+      );
+      band
+        ..strokeWidth = math.max(0.55, radius * 0.026)
+        ..color = Colors.white.withValues(
+          alpha: body.id == 'venus' ? 0.11 : 0.07,
+        );
+      canvas.drawLine(
+        Offset(center.dx - halfWidth, y),
+        Offset(center.dx + halfWidth, y),
+        band,
+      );
     }
   }
 
@@ -292,16 +394,29 @@ class _BodyPainter extends CustomPainter {
   }
 
   void _drawStarTexture(Canvas canvas, Offset center, double radius) {
-    final texture = Paint()..color = Colors.white.withValues(alpha: 0.13);
-    for (var i = 0; i < 12; i++) {
-      final angle = i * 1.89 + phase * math.pi * 2;
-      final distance = radius * (0.18 + (i % 4) * 0.17);
+    final texture = Paint();
+    for (var i = 0; i < 24; i++) {
+      final angle = i * 2.399 + phase * math.pi * 0.7;
+      final distance = radius * (0.12 + (i % 6) * 0.13);
+      texture.color = (i % 3 == 0 ? Colors.black : Colors.white).withValues(
+        alpha: i % 3 == 0 ? 0.055 : 0.12,
+      );
       canvas.drawCircle(
         center + Offset(math.cos(angle), math.sin(angle)) * distance,
-        radius * (0.025 + (i % 2) * 0.02),
+        radius * (0.018 + (i % 3) * 0.012),
         texture,
       );
     }
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius * 0.68),
+      phase * math.pi * 2,
+      math.pi * 0.58,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.65, radius * 0.022)
+        ..color = Colors.white.withValues(alpha: 0.09),
+    );
   }
 
   void _drawRings(
