@@ -51,6 +51,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
   Widget build(BuildContext context) {
     final ratio = ComparisonEngine.diameterRatio(_first, _second);
     final uncertainty = _first.sizeIsApproximate || _second.sizeIsApproximate;
+    final compact = MediaQuery.sizeOf(context).width < 360;
     return Scaffold(
       body: SpaceBackground(
         dense: true,
@@ -148,16 +149,20 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                             width: double.infinity,
                             child: SegmentedButton<ComparisonMode>(
                               key: const Key('comparison-mode'),
-                              segments: const <ButtonSegment<ComparisonMode>>[
-                                ButtonSegment(
-                                  value: ComparisonMode.trueScale,
-                                  label: Text('True scale'),
-                                  icon: Icon(Icons.straighten_rounded),
-                                ),
-                                ButtonSegment(
-                                  value: ComparisonMode.readable,
-                                  label: Text('Readable'),
-                                  icon: Icon(Icons.visibility_outlined),
+                        segments: <ButtonSegment<ComparisonMode>>[
+                          ButtonSegment(
+                            value: ComparisonMode.trueScale,
+                            label: const Text('True scale'),
+                            icon: compact
+                                ? null
+                                : const Icon(Icons.straighten_rounded),
+                          ),
+                          ButtonSegment(
+                            value: ComparisonMode.readable,
+                            label: const Text('Readable'),
+                            icon: compact
+                                ? null
+                                : const Icon(Icons.visibility_outlined),
                                 ),
                               ],
                               selected: <ComparisonMode>{_mode},
@@ -220,11 +225,12 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                     ComparisonMode.trueScale) ...<Widget>[
                                   Row(
                                     children: <Widget>[
-                                      const Icon(
-                                        Icons.zoom_out,
-                                        size: 18,
-                                        color: AppColors.muted,
-                                      ),
+                                  if (MediaQuery.sizeOf(context).width >= 360)
+                                    const Icon(
+                                      Icons.zoom_out,
+                                      size: 18,
+                                      color: AppColors.muted,
+                                    ),
                                       Expanded(
                                         child: Slider(
                                           key: const Key('comparison-zoom'),
@@ -241,16 +247,23 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                           ),
                                         ),
                                       ),
-                                      const Icon(
-                                        Icons.zoom_in,
-                                        size: 18,
-                                        color: AppColors.muted,
-                                      ),
-                                      IconButton(
+                                  if (MediaQuery.sizeOf(context).width >= 360)
+                                    const Icon(
+                                      Icons.zoom_in,
+                                      size: 18,
+                                      color: AppColors.muted,
+                                    ),
+                                  IconButton(
                                         key: const Key(
                                           'reset-comparison-camera',
                                         ),
-                                        tooltip: 'Reset camera to 1×',
+                                    tooltip: 'Reset camera to 1×',
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 36,
+                                      minHeight: 36,
+                                    ),
                                         onPressed: _cameraZoom == 1
                                             ? null
                                             : () => setState(

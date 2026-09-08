@@ -112,12 +112,16 @@ class StarsScreen extends StatelessWidget {
                                   const SizedBox(height: 7),
                                   const Row(
                                     children: <Widget>[
-                                      Text(
-                                        'Explore star',
-                                        style: TextStyle(
-                                          color: AppColors.cyan,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
+                                      Flexible(
+                                        child: Text(
+                                          'Explore star',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: AppColors.cyan,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
                                       SizedBox(width: 4),
