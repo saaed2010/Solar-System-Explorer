@@ -62,12 +62,16 @@ class ComparisonEngine {
 
   static String ratioLabel(CelestialBody first, CelestialBody second) {
     final ratio = diameterRatio(first, second);
-    final formatted = ratio >= 100
-        ? ratio.toStringAsFixed(0)
-        : ratio >= 10
-        ? ratio.toStringAsFixed(1)
-        : ratio.toStringAsFixed(2);
-    return 'Diameter ≈ $formatted × ${second.name}';
+    if (ratio == 1) return '${first.name} and ${second.name}: equal diameter';
+    final larger = ratio > 1 ? first : second;
+    final smaller = ratio > 1 ? second : first;
+    final magnitude = ratio > 1 ? ratio : 1 / ratio;
+    final formatted = magnitude >= 100
+        ? magnitude.toStringAsFixed(0)
+        : magnitude >= 10
+        ? magnitude.toStringAsFixed(1)
+        : magnitude.toStringAsFixed(2);
+    return '${larger.name} diameter ≈ $formatted × ${smaller.name}';
   }
 
   static void _validate(CelestialBody body) {

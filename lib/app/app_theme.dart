@@ -82,6 +82,22 @@ abstract final class AppTheme {
           );
         }),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: const Color(0xF2080E1A),
+        indicatorColor: AppColors.cyan.withValues(alpha: 0.14),
+        selectedIconTheme: const IconThemeData(color: AppColors.cyan),
+        unselectedIconTheme: const IconThemeData(color: AppColors.muted),
+        selectedLabelTextStyle: const TextStyle(
+          color: AppColors.starlight,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelTextStyle: const TextStyle(
+          color: AppColors.muted,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.panelSoft,

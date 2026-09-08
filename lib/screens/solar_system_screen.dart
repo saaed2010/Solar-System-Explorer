@@ -34,6 +34,7 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
 
   late final AnimationController _orbitController;
   CelestialBody? _selected;
+  Offset _cameraOffset = Offset.zero;
   bool _playing = true;
   double _speed = 1;
   bool _reducedMotion = false;
@@ -84,8 +85,12 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
     if (_playing && !_reducedMotion) _orbitController.repeat();
   }
 
-  void _focus(CelestialBody body) {
-    setState(() => _selected = _selected?.id == body.id ? null : body);
+  void _focus(CelestialBody body, {Offset cameraOffset = Offset.zero}) {
+    final clearFocus = _selected?.id == body.id;
+    setState(() {
+      _selected = clearFocus ? null : body;
+      _cameraOffset = clearFocus ? Offset.zero : cameraOffset;
+    });
   }
 
   void _open(CelestialBody body) {
@@ -100,85 +105,92 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
       dense: true,
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text(
-                          'LIVE ORBIT LAB',
-                          style: TextStyle(
-                            color: AppColors.cyan,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
-                            letterSpacing: 1.7,
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text(
+                              'LIVE ORBIT LAB',
+                              style: TextStyle(
+                                color: AppColors.cyan,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                                letterSpacing: 1.7,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Solar System',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.panelSoft,
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 7,
+                          ),
+                          child: Text(
+                            _reducedMotion
+                                ? '◌  REDUCED MOTION'
+                                : _playing
+                                ? '●  SIMULATING'
+                                : 'Ⅱ  PAUSED',
+                            style: TextStyle(
+                              color: _playing && !_reducedMotion
+                                  ? AppColors.cyan
+                                  : AppColors.muted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.7,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Solar System',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Orbital spacing is visualized for exploration—not distance scale.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                  ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => _buildStage(
+                        Size(constraints.maxWidth, constraints.maxHeight),
+                      ),
                     ),
                   ),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.panelSoft,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: AppColors.line),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 7,
-                      ),
-                      child: Text(
-                        _playing && !_reducedMotion
-                            ? '●  SIMULATING'
-                            : 'Ⅱ  PAUSED',
-                        style: TextStyle(
-                          color: _playing && !_reducedMotion
-                              ? AppColors.cyan
-                              : AppColors.muted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.7,
-                        ),
-                      ),
-                    ),
+                  _MotionControls(
+                    playing: _playing && !_reducedMotion,
+                    speed: _speed,
+                    reducedMotion: _reducedMotion,
+                    speeds: _speeds,
+                    onToggle: _togglePlayback,
+                    onSpeed: _setSpeed,
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Orbital spacing is visualized for exploration—not distance scale.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontSize: 12),
-              ),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => _buildStage(
-                    Size(constraints.maxWidth, constraints.maxHeight),
-                  ),
-                ),
-              ),
-              _MotionControls(
-                playing: _playing && !_reducedMotion,
-                speed: _speed,
-                reducedMotion: _reducedMotion,
-                speeds: _speeds,
-                onToggle: _togglePlayback,
-                onSpeed: _setSpeed,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -199,49 +211,61 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
       clipBehavior: Clip.none,
       children: <Widget>[
         Positioned.fill(
-          child: RepaintBoundary(
-            child: CustomPaint(
-              painter: _SolarOrbitsPainter(
-                center: center,
-                maximumRadius: maxRadius,
-              ),
-            ),
-          ),
-        ),
-        AnimatedBuilder(
-          animation: _orbitController,
-          builder: (context, _) {
-            final phase = _orbitController.value;
-            return Stack(
+          child: _CameraMotion(
+            offset: _cameraOffset,
+            focused: _selected != null,
+            reducedMotion: _reducedMotion,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: <Widget>[
-                for (var index = 0; index < planets.length; index++)
-                  _orbitingPlanet(
-                    body: planets[index],
-                    index: index,
-                    phase: phase,
-                    center: center,
-                    maximumRadius: maxRadius,
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      painter: _SolarOrbitsPainter(
+                        center: center,
+                        maximumRadius: maxRadius,
+                      ),
+                    ),
                   ),
-                _comet(phase, size, orbitAreaHeight),
+                ),
+                AnimatedBuilder(
+                  animation: _orbitController,
+                  builder: (context, _) {
+                    final phase = _orbitController.value;
+                    return Stack(
+                      children: <Widget>[
+                        for (var index = 0; index < planets.length; index++)
+                          _orbitingPlanet(
+                            body: planets[index],
+                            index: index,
+                            phase: phase,
+                            center: center,
+                            maximumRadius: maxRadius,
+                          ),
+                        _comet(phase, size, orbitAreaHeight),
+                      ],
+                    );
+                  },
+                ),
+                Positioned(
+                  left: center.dx - 31,
+                  top: center.dy - 31,
+                  child: _FocusTarget(
+                    selected: _selected == null || _selected?.id == sun.id,
+                    scale: _selected?.id == sun.id ? 1.2 : 1,
+                    label: 'Focus on the Sun',
+                    onTap: () => _focus(sun),
+                    child: Hero(
+                      tag: 'solar-sun',
+                      child: CelestialBodyVisual(
+                        body: sun,
+                        size: 62,
+                        phase: _orbitController.value,
+                      ),
+                    ),
+                  ),
+                ),
               ],
-            );
-          },
-        ),
-        Positioned(
-          left: center.dx - 31,
-          top: center.dy - 31,
-          child: _FocusTarget(
-            selected: _selected == null || _selected?.id == sun.id,
-            scale: _selected?.id == sun.id ? 1.2 : 1,
-            label: 'Focus on the Sun',
-            onTap: () => _focus(sun),
-            child: Hero(
-              tag: 'solar-sun',
-              child: CelestialBodyVisual(
-                body: sun,
-                size: 62,
-                phase: _orbitController.value,
-              ),
             ),
           ),
         ),
@@ -258,7 +282,7 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
                     key: ValueKey(_selected!.id),
                     body: _selected!,
                     onExplore: () => _open(_selected!),
-                    onClose: () => setState(() => _selected = null),
+                    onClose: () => _focus(_selected!),
                   ),
           ),
         ),
@@ -289,7 +313,7 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
         selected: _selected == null || _selected?.id == body.id,
         scale: _selected?.id == body.id ? 1.38 : 1,
         label: 'Focus on ${body.name}',
-        onTap: () => _focus(body),
+        onTap: () => _focus(body, cameraOffset: (center - position) * 0.16),
         child: Hero(
           tag: 'solar-${body.id}',
           child: CelestialBodyVisual(
@@ -321,6 +345,47 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CameraMotion extends StatelessWidget {
+  const _CameraMotion({
+    required this.offset,
+    required this.focused,
+    required this.reducedMotion,
+    required this.child,
+  });
+
+  final Offset offset;
+  final bool focused;
+  final bool reducedMotion;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = reducedMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 560);
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: focused ? 1.055 : 1),
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      builder: (context, scale, scaledChild) {
+        return Transform.scale(
+          scale: scale,
+          child: TweenAnimationBuilder<Offset>(
+            tween: Tween<Offset>(end: offset),
+            duration: duration,
+            curve: Curves.easeOutCubic,
+            builder: (context, value, translatedChild) {
+              return Transform.translate(offset: value, child: translatedChild);
+            },
+            child: scaledChild,
+          ),
+        );
+      },
+      child: RepaintBoundary(child: child),
     );
   }
 }
@@ -357,8 +422,8 @@ class _FocusTarget extends StatelessWidget {
               duration: const Duration(milliseconds: 300),
               child: AnimatedScale(
                 scale: scale,
-                duration: const Duration(milliseconds: 420),
-                curve: Curves.easeOutBack,
+                duration: const Duration(milliseconds: 460),
+                curve: Curves.easeOutCubic,
                 child: child,
               ),
             ),
