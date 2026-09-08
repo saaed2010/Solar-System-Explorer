@@ -51,11 +51,14 @@ class _SpaceBackgroundState extends State<SpaceBackground>
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
+          const RepaintBoundary(
+            child: CustomPaint(painter: _SpaceEnvironmentPainter()),
+          ),
           RepaintBoundary(
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, _) => CustomPaint(
-                painter: _SpacePainter(
+                painter: _StarFieldPainter(
                   phase: _controller.value,
                   count: widget.dense ? 118 : 82,
                 ),
@@ -69,11 +72,8 @@ class _SpaceBackgroundState extends State<SpaceBackground>
   }
 }
 
-class _SpacePainter extends CustomPainter {
-  const _SpacePainter({required this.phase, required this.count});
-
-  final double phase;
-  final int count;
+class _SpaceEnvironmentPainter extends CustomPainter {
+  const _SpaceEnvironmentPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -97,7 +97,20 @@ class _SpacePainter extends CustomPainter {
         ],
       ).createShader(rect);
     canvas.drawRect(rect, haze);
+  }
 
+  @override
+  bool shouldRepaint(covariant _SpaceEnvironmentPainter oldDelegate) => false;
+}
+
+class _StarFieldPainter extends CustomPainter {
+  const _StarFieldPainter({required this.phase, required this.count});
+
+  final double phase;
+  final int count;
+
+  @override
+  void paint(Canvas canvas, Size size) {
     for (var i = 0; i < count; i++) {
       final depth = 0.25 + ((i * 37) % 73) / 100;
       final rawX = ((i * 83) % 997) / 997;
@@ -115,6 +128,6 @@ class _SpacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SpacePainter oldDelegate) =>
+  bool shouldRepaint(covariant _StarFieldPainter oldDelegate) =>
       oldDelegate.phase != phase || oldDelegate.count != count;
 }
