@@ -69,9 +69,6 @@ flutter test
 
 Numeric data is stored locally and uses standard NASA Solar System Exploration and NASA/IAU reference values, with approximate or variable stellar values labelled as such in the app.
 
-Major planets, Pluto, the Sun, and ten important moons use bundled 256 px transparent artwork generated specifically for this project with OpenAI image generation, then normalized for consistent phone rendering. Deterministic Flutter overlays retain atmospheric motion, glow, depth, and body-specific details; unbundled objects and stars retain the lightweight procedural renderer. No surface asset is downloaded at runtime.
-
-The 512 px launcher artwork in `assets/branding/` was also generated specifically for this project with OpenAI image generation. The bundled cinematic in `assets/video/` was supplied by the project owner. Its Android delivery copy is 1080×1920 H.264 Main at a constant 30 fps with the original stereo AAC track retained, plus a local first-frame poster to prevent a loading flash. See [visual asset notes](docs/visual_assets.md).
 
 The comparison engine always calculates with **diameter in kilometres**. In true-scale mode both render sizes share one linear pixels-per-kilometre scale. When a very small body falls below a visible pixel, an independent locator ring may identify its position without enlarging the physical disk. Readable mode enforces a visible minimum and always displays `NOT TO SCALE`.
 

@@ -4,7 +4,6 @@ The app has no runtime image or video download.
 
 ## Celestial artwork
 
-The 20-body Android atlas was generated specifically for Solar System Explorer with OpenAI image generation, without text, logos, or watermarks. It was cropped into transparent 256 px PNG files for the Sun, major planets, Pluto, and ten important moons. The shared Flutter renderer adds lightweight animated clouds, bands, atmosphere, glow, and depth so the bodies remain alive across Solar System, Explore, Details, Stars, and Compare.
 
 Prompt summary: create a scientifically recognizable, photorealistic 5 × 4 atlas on black in the exact order Sun, Mercury, Venus, Earth, Mars; Jupiter, Saturn, Uranus, Neptune, Pluto; Moon, Phobos, Deimos, Io, Europa; Ganymede, Callisto, Titan, Enceladus, Triton. Use consistent upper-left illumination, no text, no grid, no logos, no watermark, and clear phone-scale surface identity.
 
