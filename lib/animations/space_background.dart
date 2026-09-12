@@ -77,6 +77,7 @@ class _SpaceEnvironmentPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
     final rect = Offset.zero & size;
     final background = Paint()
       ..shader = const RadialGradient(
@@ -111,6 +112,7 @@ class _StarFieldPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
     for (var i = 0; i < count; i++) {
       final depth = 0.25 + ((i * 37) % 73) / 100;
       final rawX = ((i * 83) % 997) / 997;
