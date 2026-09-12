@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../animations/space_background.dart';
@@ -24,6 +26,8 @@ class StarsScreen extends StatelessWidget {
     final stars = CelestialCatalog.stars;
     final sun = CelestialCatalog.byId('sun');
     final feature = CelestialCatalog.byId('betelgeuse');
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPadding = math.max(16.0, (viewportWidth - 1280) / 2);
 
     return SpaceBackground(
       dense: true,
@@ -32,7 +36,12 @@ class StarsScreen extends StatelessWidget {
         child: CustomScrollView(
           slivers: <Widget>[
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                18,
+                horizontalPadding,
+                0,
+              ),
               sliver: SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,12 +112,16 @@ class StarsScreen extends StatelessWidget {
                                   const SizedBox(height: 7),
                                   const Row(
                                     children: <Widget>[
-                                      Text(
-                                        'Open true scale',
-                                        style: TextStyle(
-                                          color: AppColors.cyan,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
+                                      Flexible(
+                                        child: Text(
+                                          'Explore star',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: AppColors.cyan,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
                                       SizedBox(width: 4),
@@ -147,7 +160,12 @@ class StarsScreen extends StatelessWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                12,
+                horizontalPadding,
+                24,
+              ),
               sliver: SliverGrid.builder(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 220,

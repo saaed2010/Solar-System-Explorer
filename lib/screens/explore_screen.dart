@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../animations/space_background.dart';
@@ -67,9 +69,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
     ).push(bodyDetailsRoute(body, heroTag: 'explore-${body.id}'));
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _query = '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final results = _results;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPadding = math.max(16.0, (viewportWidth - 1280) / 2);
     return SpaceBackground(
       child: SafeArea(
         bottom: false,
@@ -77,7 +87,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: <Widget>[
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                18,
+                horizontalPadding,
+                0,
+              ),
               sliver: SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,24 +117,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      key: const Key('catalog-search'),
-                      controller: _searchController,
-                      textInputAction: TextInputAction.search,
-                      onChanged: (value) => setState(() => _query = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search Europa, Mars, Halley…',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: _query.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: 'Clear search',
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _query = '');
-                                },
-                                icon: const Icon(Icons.close),
-                              ),
+                    Semantics(
+                      textField: true,
+                      label: 'Search celestial catalog',
+                      child: TextField(
+                        key: const Key('catalog-search'),
+                        controller: _searchController,
+                        textInputAction: TextInputAction.search,
+                        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                        onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                        onChanged: (value) => setState(() => _query = value),
+                        decoration: InputDecoration(
+                          hintText: 'Search Europa, Mars, Halley…',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          suffixIcon: _query.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear search',
+                                  onPressed: _clearSearch,
+                                  icon: const Icon(Icons.close),
+                                ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -141,11 +159,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ),
                     const SizedBox(height: 13),
-                    Text(
-                      '${results.length} ${results.length == 1 ? 'destination' : 'destinations'}',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                    Semantics(
+                      liveRegion: true,
+                      label: '${results.length} search results',
+                      child: Text(
+                        '${results.length} ${results.length == 1 ? 'destination' : 'destinations'}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -170,6 +192,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           'No celestial body matches “$_query”.',
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          key: const Key('clear-empty-search'),
+                          onPressed: _clearSearch,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Clear search'),
+                        ),
                       ],
                     ),
                   ),
@@ -177,7 +206,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  12,
+                  horizontalPadding,
+                  24,
+                ),
                 sliver: SliverGrid.builder(
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 220,

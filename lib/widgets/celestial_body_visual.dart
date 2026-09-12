@@ -18,17 +18,66 @@ class CelestialBodyVisual extends StatelessWidget {
   final double phase;
   final bool glow;
 
+  static const Set<String> _artworkIds = <String>{
+    'sun',
+    'mercury',
+    'venus',
+    'earth',
+    'mars',
+    'jupiter',
+    'saturn',
+    'uranus',
+    'neptune',
+    'pluto',
+    'moon',
+    'phobos',
+    'deimos',
+    'io',
+    'europa',
+    'ganymede',
+    'callisto',
+    'titan',
+    'enceladus',
+    'triton',
+  };
+
   @override
   Widget build(BuildContext context) {
+    final hasArtwork = _artworkIds.contains(body.id);
     return Semantics(
       image: true,
-      label: 'Procedural view of ${body.name}',
+      label: 'Rendered view of ${body.name}',
       child: RepaintBoundary(
         child: SizedBox.square(
           dimension: size,
-          child: CustomPaint(
-            painter: _BodyPainter(body: body, phase: phase, glow: glow),
-          ),
+          child: hasArtwork
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    Center(
+                      child: SizedBox.square(
+                        dimension: size * 0.812,
+                        child: Image.asset(
+                          'assets/celestial/${body.id}.png',
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.medium,
+                          gaplessPlayback: true,
+                          excludeFromSemantics: true,
+                        ),
+                      ),
+                    ),
+                    CustomPaint(
+                      painter: _ArtworkOverlayPainter(
+                        body: body,
+                        phase: phase,
+                        glow: glow,
+                      ),
+                    ),
+                  ],
+                )
+              : CustomPaint(
+                  painter: _BodyPainter(body: body, phase: phase, glow: glow),
+                ),
         ),
       ),
     );
@@ -95,6 +144,108 @@ class _SlowlyRotatingBodyState extends State<SlowlyRotatingBody>
   }
 }
 
+class _ArtworkOverlayPainter extends CustomPainter {
+  const _ArtworkOverlayPainter({
+    required this.body,
+    required this.phase,
+    required this.glow,
+  });
+
+  final CelestialBody body;
+  final double phase;
+  final bool glow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final shortest = math.min(size.width, size.height);
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = shortest * 0.355;
+    final colour = Color(body.palette.first);
+
+    if (glow) {
+      canvas.drawCircle(
+        center,
+        shortest * 0.49,
+        Paint()
+          ..shader =
+              RadialGradient(
+                colors: <Color>[
+                  colour.withValues(alpha: body.isStar ? 0.23 : 0.09),
+                  Colors.transparent,
+                ],
+                stops: const <double>[0.54, 1],
+              ).createShader(
+                Rect.fromCircle(center: center, radius: shortest * 0.49),
+              ),
+      );
+    }
+
+    if (body.id == 'earth') {
+      final cloud = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = math.max(0.55, radius * 0.018)
+        ..color = Colors.white.withValues(alpha: 0.18);
+      final shift = math.sin(phase * math.pi * 2) * radius * 0.12;
+      for (var i = -1; i <= 1; i++) {
+        canvas.drawArc(
+          Rect.fromCenter(
+            center: Offset(center.dx + shift, center.dy + i * radius * 0.3),
+            width: radius * 1.45,
+            height: radius * 0.28,
+          ),
+          i.isEven ? 0.1 : math.pi,
+          math.pi * 0.72,
+          false,
+          cloud,
+        );
+      }
+    } else if (body.id == 'jupiter' ||
+        body.id == 'saturn' ||
+        body.id == 'neptune') {
+      final band = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = math.max(0.45, radius * 0.012)
+        ..color = Colors.white.withValues(alpha: 0.1);
+      for (var i = -2; i <= 2; i++) {
+        final y = center.dy + i * radius * 0.25;
+        final halfWidth = math.sqrt(
+          math.max(0, radius * radius - math.pow(y - center.dy, 2)),
+        );
+        final drift = math.sin(phase * math.pi * 2 + i) * radius * 0.05;
+        canvas.drawLine(
+          Offset(center.dx - halfWidth + drift, y),
+          Offset(center.dx + halfWidth + drift, y),
+          band,
+        );
+      }
+    }
+
+    if (body.id == 'earth' ||
+        body.id == 'venus' ||
+        body.id == 'uranus' ||
+        body.id == 'neptune' ||
+        body.id == 'titan') {
+      canvas.drawCircle(
+        center,
+        radius * 1.012,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(0.7, radius * 0.022)
+          ..color = colour.withValues(alpha: 0.28),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArtworkOverlayPainter oldDelegate) =>
+      oldDelegate.body.id != body.id ||
+      oldDelegate.phase != phase ||
+      oldDelegate.glow != glow;
+}
+
 class _BodyPainter extends CustomPainter {
   const _BodyPainter({
     required this.body,
@@ -111,8 +262,12 @@ class _BodyPainter extends CustomPainter {
     final shortest = math.min(size.width, size.height);
     final center = Offset(size.width / 2, size.height / 2);
     // A single disk-to-widget ratio keeps scientific comparisons consistent.
-    final radius = shortest * 0.36;
+    final radius = shortest * 0.355;
     final colours = body.palette.map(Color.new).toList(growable: false);
+
+    if (body.isStar && glow) {
+      _drawCorona(canvas, center, radius, colours);
+    }
 
     if (glow) {
       final glowPaint = Paint()
@@ -129,7 +284,10 @@ class _BodyPainter extends CustomPainter {
       _drawRings(canvas, center, radius, colours, behind: true);
     }
 
-    if (body.type == BodyType.asteroid || body.type == BodyType.comet) {
+    if (body.type == BodyType.asteroid ||
+        body.type == BodyType.comet ||
+        body.id == 'phobos' ||
+        body.id == 'deimos') {
       _drawIrregularBody(canvas, center, radius, colours);
       return;
     }
@@ -149,14 +307,63 @@ class _BodyPainter extends CustomPainter {
 
     canvas.save();
     canvas.clipPath(Path()..addOval(sphereRect));
-    if (body.id == 'earth') _drawEarth(canvas, center, radius);
-    if (body.id == 'jupiter' || body.id == 'saturn') {
-      _drawGasBands(canvas, center, radius);
-    }
-    if (body.id == 'neptune') _drawStorm(canvas, center, radius);
-    if (body.id == 'mars') _drawMars(canvas, center, radius);
-    if (body.type == BodyType.moon || body.type == BodyType.dwarfPlanet) {
-      _drawCraters(canvas, center, radius);
+    _drawSurfaceGrain(canvas, center, radius, colours);
+    switch (body.id) {
+      case 'earth':
+        _drawEarth(canvas, center, radius);
+        _drawClouds(canvas, center, radius);
+        break;
+      case 'venus':
+        _drawVenus(canvas, center, radius);
+        break;
+      case 'mars':
+        _drawMars(canvas, center, radius);
+        break;
+      case 'jupiter':
+      case 'saturn':
+        _drawGasBands(canvas, center, radius);
+        break;
+      case 'uranus':
+        _drawUranus(canvas, center, radius);
+        break;
+      case 'neptune':
+        _drawNeptune(canvas, center, radius);
+        break;
+      case 'pluto':
+        _drawPluto(canvas, center, radius);
+        break;
+      case 'moon':
+        _drawMoonMaria(canvas, center, radius);
+        _drawCraters(canvas, center, radius, count: 12);
+        break;
+      case 'io':
+        _drawIo(canvas, center, radius);
+        break;
+      case 'europa':
+        _drawEuropa(canvas, center, radius);
+        break;
+      case 'ganymede':
+        _drawGanymede(canvas, center, radius);
+        break;
+      case 'callisto':
+        _drawCallisto(canvas, center, radius);
+        break;
+      case 'titan':
+        _drawTitan(canvas, center, radius);
+        break;
+      case 'enceladus':
+        _drawEnceladus(canvas, center, radius);
+        break;
+      case 'triton':
+        _drawTriton(canvas, center, radius);
+        break;
+      case 'mercury':
+        _drawCraters(canvas, center, radius, count: 15);
+        break;
+      default:
+        if (body.type == BodyType.dwarfPlanet) {
+          _drawCraters(canvas, center, radius);
+        }
     }
     if (body.isStar) _drawStarTexture(canvas, center, radius);
     canvas.restore();
@@ -172,8 +379,112 @@ class _BodyPainter extends CustomPainter {
       ).createShader(sphereRect);
     canvas.drawCircle(center, radius, shade);
 
+    canvas.drawCircle(
+      center,
+      radius * 0.985,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.65, radius * 0.025)
+        ..color = colours.first.withValues(alpha: body.isStar ? 0.42 : 0.30),
+    );
+    if (body.id == 'earth' ||
+        body.id == 'venus' ||
+        body.id == 'uranus' ||
+        body.id == 'neptune') {
+      canvas.drawCircle(
+        center,
+        radius * 1.018,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(0.8, radius * 0.035)
+          ..color = colours.first.withValues(alpha: 0.22),
+      );
+    }
+
     if (body.id == 'saturn') {
       _drawRings(canvas, center, radius, colours, behind: false);
+    }
+  }
+
+  void _drawSurfaceGrain(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    List<Color> colours,
+  ) {
+    final seed = body.id.codeUnits.fold<int>(0, (value, unit) => value + unit);
+    final count = radius < 10 ? 5 : (radius < 24 ? 12 : 24);
+    for (var i = 0; i < count; i++) {
+      final angle = i * 2.399 + seed * 0.013 + phase * 0.12;
+      final distance = radius * (0.12 + ((i * 37 + seed) % 78) / 100);
+      final point =
+          center + Offset(math.cos(angle), math.sin(angle)) * distance;
+      canvas.drawCircle(
+        point,
+        radius * (0.008 + (i % 4) * 0.004),
+        Paint()
+          ..color = (i.isEven ? Colors.white : colours.last).withValues(
+            alpha: body.isStar ? 0.08 : 0.045,
+          ),
+      );
+    }
+  }
+
+  void _drawClouds(Canvas canvas, Offset center, double radius) {
+    final cloud = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(0.7, radius * 0.045)
+      ..color = Colors.white.withValues(alpha: 0.24);
+    final shift = math.sin(phase * math.pi * 2) * radius * 0.1;
+    for (var i = -2; i <= 2; i++) {
+      final y = center.dy + i * radius * 0.31;
+      final halfWidth = math.sqrt(
+        math.max(0, radius * radius - math.pow(y - center.dy, 2)),
+      );
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset(center.dx + shift, y),
+          width: halfWidth * 1.45,
+          height: radius * 0.18,
+        ),
+        math.pi * (i.isEven ? 0.12 : 1.05),
+        math.pi * 0.72,
+        false,
+        cloud,
+      );
+    }
+  }
+
+  void _drawVenus(Canvas canvas, Offset center, double radius) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    for (var i = -5; i <= 5; i++) {
+      final y = center.dy + i * radius * 0.17;
+      final halfWidth = math.sqrt(
+        math.max(0, radius * radius - math.pow(y - center.dy, 2)),
+      );
+      final wave = math.sin(i * 1.7 + phase * math.pi * 2) * radius * 0.09;
+      final cloudPath = Path()
+        ..moveTo(center.dx - halfWidth, y)
+        ..quadraticBezierTo(
+          center.dx - halfWidth * 0.25,
+          y + wave,
+          center.dx + halfWidth * 0.25,
+          y - wave * 0.7,
+        )
+        ..quadraticBezierTo(
+          center.dx + halfWidth * 0.7,
+          y + wave * 0.35,
+          center.dx + halfWidth,
+          y,
+        );
+      paint
+        ..strokeWidth = radius * (i.isEven ? 0.085 : 0.045)
+        ..color = (i.isEven ? const Color(0xFFFFE3A4) : const Color(0xFF9D552B))
+            .withValues(alpha: i.isEven ? 0.25 : 0.20);
+      canvas.drawPath(cloudPath, paint);
     }
   }
 
@@ -181,127 +492,507 @@ class _BodyPainter extends CustomPainter {
     final band = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    for (var i = -4; i <= 4; i++) {
-      final y = center.dy + i * radius * 0.19;
+    final bandColours = body.id == 'jupiter'
+        ? const <Color>[
+            Color(0xFFF7E6C4),
+            Color(0xFFB86D43),
+            Color(0xFFE3B77F),
+            Color(0xFF75483D),
+          ]
+        : const <Color>[
+            Color(0xFFF5DFA4),
+            Color(0xFFC7A96C),
+            Color(0xFF9E804F),
+            Color(0xFFF0CE8A),
+          ];
+    for (var i = -6; i <= 6; i++) {
+      final y = center.dy + i * radius * 0.145;
       final halfWidth = math.sqrt(
         math.max(0, radius * radius - math.pow(y - center.dy, 2)),
       );
       band
-        ..strokeWidth = radius * (i.isEven ? 0.095 : 0.045)
-        ..color = (i.isEven ? Colors.white : Colors.black).withValues(
-          alpha: i.isEven ? 0.12 : 0.10,
+        ..strokeWidth = radius * (i.isEven ? 0.11 : 0.065)
+        ..color = bandColours[(i + 8) % bandColours.length].withValues(
+          alpha: body.id == 'jupiter' ? 0.46 : 0.30,
         );
-      final shift = math.sin(phase * math.pi * 2 + i) * radius * 0.08;
-      canvas.drawLine(
-        Offset(center.dx - halfWidth + shift, y),
-        Offset(center.dx + halfWidth + shift, y),
-        band,
-      );
+      final wave = math.sin(phase * math.pi * 2 + i * 1.3) * radius * 0.045;
+      final path = Path()
+        ..moveTo(center.dx - halfWidth, y)
+        ..quadraticBezierTo(center.dx, y + wave, center.dx + halfWidth, y);
+      canvas.drawPath(path, band);
     }
     if (body.id == 'jupiter') {
       canvas.drawOval(
         Rect.fromCenter(
           center: Offset(center.dx + radius * 0.34, center.dy + radius * 0.24),
-          width: radius * 0.48,
-          height: radius * 0.22,
+          width: radius * 0.55,
+          height: radius * 0.29,
         ),
-        Paint()..color = const Color(0xFF9F4035).withValues(alpha: 0.75),
+        Paint()..color = const Color(0xFFFFC09A).withValues(alpha: 0.34),
+      );
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(center.dx + radius * 0.34, center.dy + radius * 0.24),
+          width: radius * 0.43,
+          height: radius * 0.20,
+        ),
+        Paint()..color = const Color(0xFFA83E32).withValues(alpha: 0.82),
       );
     }
   }
 
   void _drawEarth(Canvas canvas, Offset center, double radius) {
-    final land = Paint()
-      ..color = const Color(0xFF69A86F).withValues(alpha: 0.86);
-    final shift = math.sin(phase * math.pi * 2) * radius * 0.15;
-    final path = Path()
-      ..moveTo(center.dx - radius * 0.7 + shift, center.dy - radius * 0.24)
-      ..quadraticBezierTo(
-        center.dx - radius * 0.25 + shift,
-        center.dy - radius * 0.7,
-        center.dx + radius * 0.08 + shift,
-        center.dy - radius * 0.2,
+    final shift = math.sin(phase * math.pi * 2) * radius * 0.16;
+    final land = Paint()..color = const Color(0xFF5D8F55);
+    final africaEurope = Path()
+      ..moveTo(center.dx - radius * 0.2 + shift, center.dy - radius * 0.62)
+      ..cubicTo(
+        center.dx + radius * 0.28 + shift,
+        center.dy - radius * 0.67,
+        center.dx + radius * 0.52 + shift,
+        center.dy - radius * 0.3,
+        center.dx + radius * 0.3 + shift,
+        center.dy - radius * 0.08,
       )
-      ..quadraticBezierTo(
-        center.dx + radius * 0.38 + shift,
-        center.dy + radius * 0.06,
-        center.dx + radius * 0.05 + shift,
-        center.dy + radius * 0.22,
+      ..cubicTo(
+        center.dx + radius * 0.18 + shift,
+        center.dy + radius * 0.35,
+        center.dx - radius * 0.03 + shift,
+        center.dy + radius * 0.72,
+        center.dx - radius * 0.18 + shift,
+        center.dy + radius * 0.42,
       )
-      ..quadraticBezierTo(
-        center.dx - radius * 0.34 + shift,
-        center.dy + radius * 0.3,
-        center.dx - radius * 0.7 + shift,
-        center.dy - radius * 0.24,
+      ..cubicTo(
+        center.dx - radius * 0.42 + shift,
+        center.dy + radius * 0.08,
+        center.dx - radius * 0.55 + shift,
+        center.dy - radius * 0.22,
+        center.dx - radius * 0.2 + shift,
+        center.dy - radius * 0.62,
       )
       ..close();
-    canvas.drawPath(path, land);
+    canvas.drawPath(africaEurope, land);
+    canvas.drawPath(
+      Path()
+        ..moveTo(center.dx - radius * 0.94 + shift, center.dy - radius * 0.43)
+        ..cubicTo(
+          center.dx - radius * 0.66 + shift,
+          center.dy - radius * 0.62,
+          center.dx - radius * 0.46 + shift,
+          center.dy - radius * 0.17,
+          center.dx - radius * 0.57 + shift,
+          center.dy + radius * 0.08,
+        )
+        ..cubicTo(
+          center.dx - radius * 0.46 + shift,
+          center.dy + radius * 0.48,
+          center.dx - radius * 0.66 + shift,
+          center.dy + radius * 0.72,
+          center.dx - radius * 0.76 + shift,
+          center.dy + radius * 0.26,
+        )
+        ..close(),
+      Paint()..color = const Color(0xFF6E9B59),
+    );
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(
-          center.dx + radius * 0.48 + shift,
-          center.dy + radius * 0.42,
+          center.dx + radius * 0.6 + shift,
+          center.dy + radius * 0.46,
         ),
-        width: radius * 0.55,
-        height: radius * 0.28,
+        width: radius * 0.42,
+        height: radius * 0.22,
       ),
-      land,
+      Paint()..color = const Color(0xFF8A9D5B),
     );
   }
 
   void _drawMars(Canvas canvas, Offset center, double radius) {
     final mark = Paint()
-      ..color = const Color(0xFF6C251D).withValues(alpha: 0.48);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(center.dx - radius * 0.25, center.dy + radius * 0.05),
-        width: radius * 0.85,
-        height: radius * 0.28,
-      ),
+      ..color = const Color(0xFF5A211C).withValues(alpha: 0.7);
+    canvas.drawPath(
+      Path()
+        ..moveTo(center.dx - radius * 0.82, center.dy - radius * 0.05)
+        ..cubicTo(
+          center.dx - radius * 0.45,
+          center.dy - radius * 0.36,
+          center.dx - radius * 0.15,
+          center.dy + radius * 0.08,
+          center.dx + radius * 0.12,
+          center.dy - radius * 0.12,
+        )
+        ..cubicTo(
+          center.dx + radius * 0.42,
+          center.dy - radius * 0.3,
+          center.dx + radius * 0.72,
+          center.dy + radius * 0.06,
+          center.dx + radius * 0.52,
+          center.dy + radius * 0.23,
+        )
+        ..cubicTo(
+          center.dx + radius * 0.14,
+          center.dy + radius * 0.4,
+          center.dx - radius * 0.43,
+          center.dy + radius * 0.25,
+          center.dx - radius * 0.82,
+          center.dy - radius * 0.05,
+        )
+        ..close(),
       mark,
     );
-    canvas.drawCircle(
-      Offset(center.dx + radius * 0.34, center.dy - radius * 0.38),
-      radius * 0.11,
-      Paint()..color = Colors.white.withValues(alpha: 0.65),
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.dx + radius * 0.18, center.dy + radius * 0.16),
+        width: radius * 0.55,
+        height: radius * 0.08,
+      ),
+      Paint()..color = const Color(0xFFDA7850).withValues(alpha: 0.42),
     );
+    canvas.drawCircle(
+      Offset(center.dx + radius * 0.15, center.dy - radius * 0.86),
+      radius * 0.25,
+      Paint()..color = const Color(0xFFFFE5D2).withValues(alpha: 0.78),
+    );
+    _drawCraters(canvas, center, radius, count: 6);
   }
 
-  void _drawStorm(Canvas canvas, Offset center, double radius) {
+  void _drawUranus(Canvas canvas, Offset center, double radius) {
+    final band = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(0.65, radius * 0.045)
+      ..color = const Color(0xFFE0FFFF).withValues(alpha: 0.15);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(-0.28);
+    for (var i = -4; i <= 4; i++) {
+      canvas.drawLine(
+        Offset(-radius, i * radius * 0.17),
+        Offset(radius, i * radius * 0.17),
+        band,
+      );
+    }
+    canvas.restore();
+  }
+
+  void _drawNeptune(Canvas canvas, Offset center, double radius) {
+    final cloud = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(0.65, radius * 0.055)
+      ..color = const Color(0xFF8FCBFF).withValues(alpha: 0.23);
+    for (var i = -3; i <= 3; i++) {
+      final y = center.dy + i * radius * 0.22;
+      final halfWidth = math.sqrt(
+        math.max(0, radius * radius - math.pow(y - center.dy, 2)),
+      );
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset(center.dx, y),
+          width: halfWidth * 1.7,
+          height: radius * 0.12,
+        ),
+        i.isEven ? 0.1 : math.pi,
+        math.pi * 0.72,
+        false,
+        cloud,
+      );
+    }
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(center.dx + radius * 0.32, center.dy + radius * 0.14),
-        width: radius * 0.38,
-        height: radius * 0.22,
+        width: radius * 0.42,
+        height: radius * 0.23,
       ),
-      Paint()..color = const Color(0xFF142961).withValues(alpha: 0.7),
+      Paint()..color = const Color(0xFF101D58).withValues(alpha: 0.78),
     );
   }
 
-  void _drawCraters(Canvas canvas, Offset center, double radius) {
-    final crater = Paint()..color = Colors.black.withValues(alpha: 0.16);
-    for (var i = 0; i < 8; i++) {
+  void _drawPluto(Canvas canvas, Offset center, double radius) {
+    final heart = Path()
+      ..moveTo(center.dx, center.dy + radius * 0.46)
+      ..cubicTo(
+        center.dx - radius * 0.62,
+        center.dy + radius * 0.06,
+        center.dx - radius * 0.54,
+        center.dy - radius * 0.38,
+        center.dx - radius * 0.18,
+        center.dy - radius * 0.32,
+      )
+      ..cubicTo(
+        center.dx,
+        center.dy - radius * 0.28,
+        center.dx + radius * 0.12,
+        center.dy - radius * 0.38,
+        center.dx + radius * 0.28,
+        center.dy - radius * 0.26,
+      )
+      ..cubicTo(
+        center.dx + radius * 0.54,
+        center.dy,
+        center.dx + radius * 0.28,
+        center.dy + radius * 0.26,
+        center.dx,
+        center.dy + radius * 0.46,
+      )
+      ..close();
+    canvas.drawPath(
+      heart,
+      Paint()..color = const Color(0xFFF0DED0).withValues(alpha: 0.78),
+    );
+    _drawCraters(canvas, center, radius, count: 7);
+  }
+
+  void _drawMoonMaria(Canvas canvas, Offset center, double radius) {
+    final maria = Paint()
+      ..color = const Color(0xFF51545A).withValues(alpha: 0.42);
+    final regions = <Rect>[
+      Rect.fromCenter(
+        center: Offset(center.dx - radius * 0.28, center.dy - radius * 0.18),
+        width: radius * 0.72,
+        height: radius * 0.46,
+      ),
+      Rect.fromCenter(
+        center: Offset(center.dx + radius * 0.38, center.dy + radius * 0.12),
+        width: radius * 0.48,
+        height: radius * 0.58,
+      ),
+      Rect.fromCenter(
+        center: Offset(center.dx - radius * 0.08, center.dy + radius * 0.44),
+        width: radius * 0.38,
+        height: radius * 0.26,
+      ),
+    ];
+    for (final region in regions) {
+      canvas.drawOval(region, maria);
+    }
+  }
+
+  void _drawIo(Canvas canvas, Offset center, double radius) {
+    final colours = <Color>[
+      const Color(0xFF8B351B),
+      const Color(0xFFE36D18),
+      const Color(0xFF6E4C23),
+    ];
+    for (var i = 0; i < 11; i++) {
+      final angle = i * 2.399 + phase * 0.25;
+      final distance = radius * (0.18 + (i % 4) * 0.19);
+      final point =
+          center + Offset(math.cos(angle), math.sin(angle)) * distance;
+      canvas.drawCircle(
+        point,
+        radius * (0.045 + (i % 3) * 0.025),
+        Paint()..color = colours[i % colours.length].withValues(alpha: 0.78),
+      );
+      if (i % 3 == 0) {
+        canvas.drawCircle(
+          point,
+          radius * 0.022,
+          Paint()..color = const Color(0xFF33201B).withValues(alpha: 0.75),
+        );
+      }
+    }
+  }
+
+  void _drawEuropa(Canvas canvas, Offset center, double radius) {
+    final fracture = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(0.55, radius * 0.022)
+      ..color = const Color(0xFF8B493A).withValues(alpha: 0.62);
+    for (var i = -4; i <= 4; i++) {
+      final path = Path()
+        ..moveTo(center.dx - radius, center.dy + i * radius * 0.18)
+        ..cubicTo(
+          center.dx - radius * 0.35,
+          center.dy + (i * 0.18 + 0.18) * radius,
+          center.dx + radius * 0.2,
+          center.dy + (i * 0.18 - 0.12) * radius,
+          center.dx + radius,
+          center.dy + i * radius * 0.18,
+        );
+      canvas.drawPath(path, fracture);
+    }
+  }
+
+  void _drawGanymede(Canvas canvas, Offset center, double radius) {
+    final dark = Paint()
+      ..color = const Color(0xFF4D4647).withValues(alpha: 0.36);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.dx - radius * 0.34, center.dy - radius * 0.16),
+        width: radius * 0.92,
+        height: radius * 0.7,
+      ),
+      dark,
+    );
+    final groove = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(0.45, radius * 0.018)
+      ..color = Colors.white.withValues(alpha: 0.18);
+    for (var i = -3; i <= 3; i++) {
+      canvas.drawArc(
+        Rect.fromCircle(
+          center: Offset(center.dx + i * radius * 0.08, center.dy),
+          radius: radius * (0.35 + i.abs() * 0.06),
+        ),
+        -1.1,
+        2.2,
+        false,
+        groove,
+      );
+    }
+    _drawCraters(canvas, center, radius, count: 7);
+  }
+
+  void _drawCallisto(Canvas canvas, Offset center, double radius) {
+    _drawCraters(canvas, center, radius, count: 18, highContrast: true);
+  }
+
+  void _drawTitan(Canvas canvas, Offset center, double radius) {
+    final haze = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(0.8, radius * 0.075)
+      ..color = const Color(0xFFFFC85B).withValues(alpha: 0.34);
+    for (var i = -3; i <= 3; i++) {
+      final y = center.dy + i * radius * 0.22;
+      final halfWidth = math.sqrt(
+        math.max(0, radius * radius - math.pow(y - center.dy, 2)),
+      );
+      canvas.drawLine(
+        Offset(center.dx - halfWidth, y),
+        Offset(center.dx + halfWidth, y),
+        haze,
+      );
+    }
+  }
+
+  void _drawEnceladus(Canvas canvas, Offset center, double radius) {
+    final fissure = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(0.55, radius * 0.022)
+      ..color = const Color(0xFF67B9D4).withValues(alpha: 0.62);
+    for (var i = -2; i <= 2; i++) {
+      final x = center.dx + i * radius * 0.16;
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset(x, center.dy + radius * 0.42),
+          width: radius * 0.26,
+          height: radius * 0.9,
+        ),
+        -2.0,
+        2.4,
+        false,
+        fissure,
+      );
+    }
+    _drawCraters(canvas, center, radius, count: 5);
+  }
+
+  void _drawTriton(Canvas canvas, Offset center, double radius) {
+    final cap = Paint()
+      ..color = const Color(0xFFE7CCD5).withValues(alpha: 0.54);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.dx, center.dy - radius * 0.52),
+        width: radius * 1.55,
+        height: radius * 0.66,
+      ),
+      cap,
+    );
+    final plume = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(0.5, radius * 0.022)
+      ..color = const Color(0xFF4A3442).withValues(alpha: 0.52);
+    for (var i = 0; i < 4; i++) {
+      final x = center.dx + (i - 1.5) * radius * 0.26;
+      canvas.drawLine(
+        Offset(x, center.dy - radius * 0.2),
+        Offset(x + radius * 0.08, center.dy + radius * 0.45),
+        plume,
+      );
+    }
+  }
+
+  void _drawCraters(
+    Canvas canvas,
+    Offset center,
+    double radius, {
+    int count = 8,
+    bool highContrast = false,
+  }) {
+    final crater = Paint()
+      ..color = Colors.black.withValues(alpha: highContrast ? 0.34 : 0.18);
+    final rim = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(0.45, radius * 0.012)
+      ..color = Colors.white.withValues(alpha: highContrast ? 0.28 : 0.13);
+    final visibleCount = radius < 9 ? math.min(count, 4) : count;
+    for (var i = 0; i < visibleCount; i++) {
       final angle = i * 2.31 + phase * 0.4;
       final distance = radius * (0.2 + (i % 3) * 0.22);
+      final craterRadius = radius * (0.035 + (i % 3) * 0.018);
       canvas.drawCircle(
         center + Offset(math.cos(angle), math.sin(angle)) * distance,
-        radius * (0.035 + (i % 3) * 0.018),
+        craterRadius,
         crater,
       );
+      if (radius >= 13 && i.isEven) {
+        canvas.drawCircle(
+          center + Offset(math.cos(angle), math.sin(angle)) * distance,
+          craterRadius * 1.18,
+          rim,
+        );
+      }
+    }
+  }
+
+  void _drawCorona(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    List<Color> colours,
+  ) {
+    final ray = Paint()
+      ..strokeCap = StrokeCap.round
+      ..color = colours.first.withValues(alpha: 0.16);
+    final seed = body.id.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
+    final rayCount = radius < 12 ? 8 : 18;
+    for (var i = 0; i < rayCount; i++) {
+      final angle = i / rayCount * math.pi * 2 + phase * 0.12;
+      final variation = 0.12 + ((i * 29 + seed) % 22) / 100;
+      final start =
+          center + Offset(math.cos(angle), math.sin(angle)) * radius * 1.02;
+      final end =
+          center +
+          Offset(math.cos(angle), math.sin(angle)) * radius * (1.1 + variation);
+      ray.strokeWidth = math.max(0.45, radius * (i.isEven ? 0.016 : 0.01));
+      canvas.drawLine(start, end, ray);
     }
   }
 
   void _drawStarTexture(Canvas canvas, Offset center, double radius) {
-    final texture = Paint()..color = Colors.white.withValues(alpha: 0.13);
-    for (var i = 0; i < 12; i++) {
-      final angle = i * 1.89 + phase * math.pi * 2;
-      final distance = radius * (0.18 + (i % 4) * 0.17);
+    final texture = Paint();
+    for (var i = 0; i < 24; i++) {
+      final angle = i * 2.399 + phase * math.pi * 0.7;
+      final distance = radius * (0.12 + (i % 6) * 0.13);
+      texture.color = (i % 3 == 0 ? Colors.black : Colors.white).withValues(
+        alpha: i % 3 == 0 ? 0.055 : 0.12,
+      );
       canvas.drawCircle(
         center + Offset(math.cos(angle), math.sin(angle)) * distance,
-        radius * (0.025 + (i % 2) * 0.02),
+        radius * (0.018 + (i % 3) * 0.012),
         texture,
       );
     }
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius * 0.68),
+      phase * math.pi * 2,
+      math.pi * 0.58,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.65, radius * 0.022)
+        ..color = Colors.white.withValues(alpha: 0.09),
+    );
   }
 
   void _drawRings(

@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  video_player: ^2.14.0
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +54,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/celestial/
+    - assets/video/intro_poster.jpg
+    - assets/video/solar_system_intro.mp4
 
   # To add assets to your application, add an assets section, like this:
   # assets:

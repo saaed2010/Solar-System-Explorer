@@ -17,6 +17,7 @@ Solar System Explorer is an interactive Flutter experience for exploring the Sol
 - **Stars:** a dedicated stellar catalog spanning Proxima Centauri through red and blue supergiants.
 - **Body details:** a cinematic Hero transition, procedural rotating body, staged facts, scientifically relevant properties, and short field notes.
 - **Scale laboratory:** reusable planet/moon/star/small-body comparison with an exact physical-diameter mode, shared camera zoom, and an explicitly labelled readable mode.
+- **Cold-start cinematic:** an Android-only, locally bundled portrait film with synchronized audio, lifecycle-safe pause/resume, and failure-safe entry to the main experience.
 - **Accessibility:** high-contrast typography, semantic controls, 48 px interaction targets, and automatic reduced-motion behaviour when the platform requests it.
 
 ## Technology
@@ -24,7 +25,7 @@ Solar System Explorer is an interactive Flutter experience for exploring the Sol
 - Flutter 3.44.8
 - Dart 3.12.2
 - Material 3
-- Android-first, with Web and Windows project targets included
+- Android phone is the final production target; Web and Windows remain development targets
 
 ## Architecture
 
@@ -38,7 +39,7 @@ lib/
 ├── data/        # local curated scientific catalog
 ├── models/      # immutable celestial body definitions
 ├── screens/     # Solar System, Explore, Stars, Details, Compare
-└── widgets/     # procedural bodies and reusable panels/cards
+└── widgets/     # shared body rendering and reusable panels/cards
 ```
 
 Animation is deliberately bounded: one slow background controller per active screen, one orbital controller in the simulation, deterministic low-count particles, isolated custom painting, no continuous blur, and no off-screen animated tab stack.
@@ -66,7 +67,11 @@ flutter test
 
 ## Scientific data and artwork
 
-Numeric data is stored locally and uses standard NASA Solar System Exploration and NASA/IAU reference values, with approximate or variable stellar values labelled as such in the app. In-app celestial bodies are original procedural Flutter artwork rather than external image assets, keeping the experience coherent and lightweight. The 512 px launcher artwork in `assets/branding/` was generated specifically for this project with OpenAI image generation; derived Android, Web, and Windows icon sizes are stored in their native platform folders and contain no text or watermark.
+Numeric data is stored locally and uses standard NASA Solar System Exploration and NASA/IAU reference values, with approximate or variable stellar values labelled as such in the app.
+
+Major planets, Pluto, the Sun, and ten important moons use bundled 256 px transparent artwork generated specifically for this project with OpenAI image generation, then normalized for consistent phone rendering. Deterministic Flutter overlays retain atmospheric motion, glow, depth, and body-specific details; unbundled objects and stars retain the lightweight procedural renderer. No surface asset is downloaded at runtime.
+
+The 512 px launcher artwork in `assets/branding/` was also generated specifically for this project with OpenAI image generation. The bundled cinematic in `assets/video/` was supplied by the project owner. Its Android delivery copy is 1080×1920 H.264 Main at a constant 30 fps with the original stereo AAC track retained, plus a local first-frame poster to prevent a loading flash. See [visual asset notes](docs/visual_assets.md).
 
 The comparison engine always calculates with **diameter in kilometres**. In true-scale mode both render sizes share one linear pixels-per-kilometre scale. When a very small body falls below a visible pixel, an independent locator ring may identify its position without enlarging the physical disk. Readable mode enforces a visible minimum and always displays `NOT TO SCALE`.
 
@@ -82,25 +87,26 @@ See [scientific data notes and primary references](docs/data_sources.md) for NAS
 
 ## Dependencies
 
-The runtime uses the Flutter SDK and Material/Cupertino icon fonts only. No third-party animation, routing, state-management, networking, or rendering package is required.
+The only added runtime plugin is Flutter's official `video_player`, used for the local Android cold-start cinematic. No third-party animation, routing, state-management, networking, or rendering package is required.
 
 ## Verification
 
 - `flutter analyze`: no issues found
-- `flutter test`: model, catalog, true-scale mathematics, navigation, search, comparison labels, and compact Android viewport coverage
-- Android: debug APK build verified
-- Web: release build verified
+- `flutter test`: 25/25 tests passed, covering the catalog, true-scale mathematics, navigation, search, Details → Compare, reduced motion, enlarged text, and 320/360/390 px Android viewports
+- Android: release APK build and Pixel 3a / Android 16 emulator smoke test verified
+- Intro and lifecycle: process-local cold-start playback, no replay on resume, safe background pause/resume, and immediate decoder-failure fallback
 
 ## Status
 
-STEP 1 is complete. The source and full commit history are published at [github.com/saaed2010/Solar-System-Explorer](https://github.com/saaed2010/Solar-System-Explorer).
+STEP 1 and the Android-focused STEP 2 production polish are complete. The source and full commit history are published at [github.com/saaed2010/Solar-System-Explorer](https://github.com/saaed2010/Solar-System-Explorer).
 
 ## Known limits
 
 - Orbital positions and interplanetary distances in the main simulation are intentionally visualized rather than presented to physical scale. Scientific scale applies only inside the Scale Laboratory.
 - Stellar diameters are observational estimates and can change as measurements improve; approximate values are visibly labelled.
 - The catalog is English-only in STEP 1.
-- No Android emulator or physical Android device was connected during final verification; Android compilation and Flutter-rendered widget smoke tests were used instead.
+- The cinematic is intentionally portrait-only, matching the Android phone product scope.
+- No physical Android handset was available for final speaker/video sign-off. The bundled cinematic fully decodes offline, but the available Android 16 emulator's `c2.goldfish.h264.decoder` crashes independently of profile, resolution, and H.264 compatibility level; the app correctly takes its immediate startup fallback in that environment.
 
 ## License
 
