@@ -117,23 +117,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      key: const Key('catalog-search'),
-                      controller: _searchController,
-                      textInputAction: TextInputAction.search,
-                      onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                      onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                      onChanged: (value) => setState(() => _query = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search Europa, Mars, Halley…',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: _query.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: 'Clear search',
-                                onPressed: _clearSearch,
-                                icon: const Icon(Icons.close),
-                              ),
+                    Semantics(
+                      textField: true,
+                      label: 'Search celestial catalog',
+                      child: TextField(
+                        key: const Key('catalog-search'),
+                        controller: _searchController,
+                        textInputAction: TextInputAction.search,
+                        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                        onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                        onChanged: (value) => setState(() => _query = value),
+                        decoration: InputDecoration(
+                          hintText: 'Search Europa, Mars, Halley…',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          suffixIcon: _query.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear search',
+                                  onPressed: _clearSearch,
+                                  icon: const Icon(Icons.close),
+                                ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),

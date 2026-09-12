@@ -51,7 +51,9 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
   Widget build(BuildContext context) {
     final ratio = ComparisonEngine.diameterRatio(_first, _second);
     final uncertainty = _first.sizeIsApproximate || _second.sizeIsApproximate;
-    final compact = MediaQuery.sizeOf(context).width < 360;
+    final compact =
+        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.2;
     return Scaffold(
       body: SpaceBackground(
         dense: true,
@@ -149,20 +151,20 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                             width: double.infinity,
                             child: SegmentedButton<ComparisonMode>(
                               key: const Key('comparison-mode'),
-                        segments: <ButtonSegment<ComparisonMode>>[
-                          ButtonSegment(
-                            value: ComparisonMode.trueScale,
-                            label: const Text('True scale'),
-                            icon: compact
-                                ? null
-                                : const Icon(Icons.straighten_rounded),
-                          ),
-                          ButtonSegment(
-                            value: ComparisonMode.readable,
-                            label: const Text('Readable'),
-                            icon: compact
-                                ? null
-                                : const Icon(Icons.visibility_outlined),
+                              segments: <ButtonSegment<ComparisonMode>>[
+                                ButtonSegment(
+                                  value: ComparisonMode.trueScale,
+                                  label: const Text('True scale'),
+                                  icon: compact
+                                      ? null
+                                      : const Icon(Icons.straighten_rounded),
+                                ),
+                                ButtonSegment(
+                                  value: ComparisonMode.readable,
+                                  label: const Text('Readable'),
+                                  icon: compact
+                                      ? null
+                                      : const Icon(Icons.visibility_outlined),
                                 ),
                               ],
                               selected: <ComparisonMode>{_mode},
@@ -225,12 +227,13 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                     ComparisonMode.trueScale) ...<Widget>[
                                   Row(
                                     children: <Widget>[
-                                  if (MediaQuery.sizeOf(context).width >= 360)
-                                    const Icon(
-                                      Icons.zoom_out,
-                                      size: 18,
-                                      color: AppColors.muted,
-                                    ),
+                                      if (MediaQuery.sizeOf(context).width >=
+                                          360)
+                                        const Icon(
+                                          Icons.zoom_out,
+                                          size: 18,
+                                          color: AppColors.muted,
+                                        ),
                                       Expanded(
                                         child: Slider(
                                           key: const Key('comparison-zoom'),
@@ -247,23 +250,24 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                           ),
                                         ),
                                       ),
-                                  if (MediaQuery.sizeOf(context).width >= 360)
-                                    const Icon(
-                                      Icons.zoom_in,
-                                      size: 18,
-                                      color: AppColors.muted,
-                                    ),
-                                  IconButton(
+                                      if (MediaQuery.sizeOf(context).width >=
+                                          360)
+                                        const Icon(
+                                          Icons.zoom_in,
+                                          size: 18,
+                                          color: AppColors.muted,
+                                        ),
+                                      IconButton(
                                         key: const Key(
                                           'reset-comparison-camera',
                                         ),
-                                    tooltip: 'Reset camera to 1×',
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.all(4),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 36,
-                                      minHeight: 36,
-                                    ),
+                                        tooltip: 'Reset camera to 1×',
+                                        visualDensity: VisualDensity.compact,
+                                        padding: const EdgeInsets.all(4),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 36,
+                                          minHeight: 36,
+                                        ),
                                         onPressed: _cameraZoom == 1
                                             ? null
                                             : () => setState(
@@ -453,31 +457,39 @@ class _ComparisonStage extends StatelessWidget {
           maximumDiameter: maximum,
           readableMinimumDiameter: math.min(64, maximum * 0.54),
         );
-        return ClipRect(
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: _ScaledBody(
-                  body: first,
-                  diameter: layout.firstDiameter,
-                  cameraZoom: cameraZoom,
-                  trueScale: layout.isTrueScale,
+        final scaleDescription = layout.isTrueScale
+            ? 'Both bodies use one shared physical scale.'
+            : 'Readable mode is not to scale.';
+        return Semantics(
+          container: true,
+          label:
+              'Size comparison of ${first.name} and ${second.name}. $scaleDescription',
+          child: ClipRect(
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: _ScaledBody(
+                    body: first,
+                    diameter: layout.firstDiameter,
+                    cameraZoom: cameraZoom,
+                    trueScale: layout.isTrueScale,
+                  ),
                 ),
-              ),
-              Container(
-                width: 1,
-                height: 210,
-                color: AppColors.line.withValues(alpha: 0.65),
-              ),
-              Expanded(
-                child: _ScaledBody(
-                  body: second,
-                  diameter: layout.secondDiameter,
-                  cameraZoom: cameraZoom,
-                  trueScale: layout.isTrueScale,
+                Container(
+                  width: 1,
+                  height: 210,
+                  color: AppColors.line.withValues(alpha: 0.65),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: _ScaledBody(
+                    body: second,
+                    diameter: layout.secondDiameter,
+                    cameraZoom: cameraZoom,
+                    trueScale: layout.isTrueScale,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
