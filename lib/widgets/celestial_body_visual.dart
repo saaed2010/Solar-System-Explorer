@@ -284,6 +284,11 @@ class _BodyPainter extends CustomPainter {
       _drawRings(canvas, center, radius, colours, behind: true);
     }
 
+    if (body.type == BodyType.region) {
+      _drawAsteroidField(canvas, center, radius, colours);
+      return;
+    }
+
     if (body.type == BodyType.asteroid ||
         body.type == BodyType.comet ||
         body.id == 'phobos' ||
@@ -292,7 +297,14 @@ class _BodyPainter extends CustomPainter {
       return;
     }
 
-    final sphereRect = Rect.fromCircle(center: center, radius: radius);
+    final sphereRect = body.id == 'haumea'
+        ? Rect.fromCenter(
+            center: center,
+            width: radius * 2,
+            height: radius * 1.42,
+          )
+        : Rect.fromCircle(center: center, radius: radius);
+    final spherePath = Path()..addOval(sphereRect);
     final sphere = Paint()
       ..shader = RadialGradient(
         center: const Alignment(-0.42, -0.45),
@@ -303,10 +315,10 @@ class _BodyPainter extends CustomPainter {
           (index) => index / colours.length,
         ),
       ).createShader(sphereRect);
-    canvas.drawCircle(center, radius, sphere);
+    canvas.drawPath(spherePath, sphere);
 
     canvas.save();
-    canvas.clipPath(Path()..addOval(sphereRect));
+    canvas.clipPath(spherePath);
     _drawSurfaceGrain(canvas, center, radius, colours);
     switch (body.id) {
       case 'earth':
@@ -357,6 +369,14 @@ class _BodyPainter extends CustomPainter {
       case 'triton':
         _drawTriton(canvas, center, radius);
         break;
+      case 'ceres':
+        _drawCeres(canvas, center, radius);
+        break;
+      case 'eris':
+      case 'makemake':
+      case 'haumea':
+        _drawDwarfWorld(canvas, center, radius);
+        break;
       case 'mercury':
         _drawCraters(canvas, center, radius, count: 15);
         break;
@@ -377,11 +397,10 @@ class _BodyPainter extends CustomPainter {
         ],
         stops: const <double>[0, 0.48, 1],
       ).createShader(sphereRect);
-    canvas.drawCircle(center, radius, shade);
+    canvas.drawPath(spherePath, shade);
 
-    canvas.drawCircle(
-      center,
-      radius * 0.985,
+    canvas.drawPath(
+      spherePath,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.max(0.65, radius * 0.025)
@@ -912,6 +931,46 @@ class _BodyPainter extends CustomPainter {
     }
   }
 
+  void _drawCeres(Canvas canvas, Offset center, double radius) {
+    _drawCraters(canvas, center, radius, count: 12, highContrast: true);
+    final deposit = Paint()..color = Colors.white.withValues(alpha: 0.78);
+    canvas.drawCircle(
+      center + Offset(radius * 0.26, radius * 0.04),
+      math.max(0.7, radius * 0.034),
+      deposit,
+    );
+    canvas.drawCircle(
+      center + Offset(radius * 0.31, radius * 0.07),
+      math.max(0.45, radius * 0.02),
+      deposit,
+    );
+  }
+
+  void _drawDwarfWorld(Canvas canvas, Offset center, double radius) {
+    final accent = switch (body.id) {
+      'makemake' => const Color(0xFF9A4F35),
+      'haumea' => const Color(0xFF8A6F68),
+      _ => const Color(0xFFD9E5EA),
+    };
+    for (var i = 0; i < 7; i++) {
+      final angle = i * 2.17 + phase * 0.16;
+      final point =
+          center +
+          Offset(math.cos(angle), math.sin(angle)) *
+              radius *
+              (0.18 + (i % 3) * 0.22);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: point,
+          width: radius * (0.16 + (i % 2) * 0.09),
+          height: radius * (0.08 + (i % 3) * 0.045),
+        ),
+        Paint()..color = accent.withValues(alpha: 0.18),
+      );
+    }
+    _drawCraters(canvas, center, radius, count: 5);
+  }
+
   void _drawCraters(
     Canvas canvas,
     Offset center,
@@ -1060,11 +1119,100 @@ class _BodyPainter extends CustomPainter {
         )
         ..close();
       canvas.drawPath(tailPath, tail);
+
+      if (body.id == 'halley') {
+        canvas.drawCircle(
+          center,
+          radius * 1.15,
+          Paint()
+            ..shader =
+                RadialGradient(
+                  colors: <Color>[
+                    const Color(0xFFE9FCFF).withValues(alpha: 0.42),
+                    const Color(0xFF76CDE4).withValues(alpha: 0.12),
+                    Colors.transparent,
+                  ],
+                ).createShader(
+                  Rect.fromCircle(center: center, radius: radius * 1.15),
+                ),
+        );
+        _drawRockLobe(canvas, center, radius * 0.52, const <Color>[
+          Color(0xFFDCE9E8),
+          Color(0xFF66777B),
+          Color(0xFF20282C),
+        ], seed: 76);
+        canvas.drawCircle(
+          center + Offset(-radius * 0.12, -radius * 0.14),
+          math.max(0.65, radius * 0.09),
+          Paint()..color = const Color(0xFFF4FFFF),
+        );
+        return;
+      }
     }
+
+    if (body.id == '67p') {
+      _drawRockLobe(
+        canvas,
+        center + Offset(-radius * 0.24, radius * 0.08),
+        radius * 0.72,
+        colours,
+        seed: 67,
+      );
+      _drawRockLobe(
+        canvas,
+        center + Offset(radius * 0.38, -radius * 0.18),
+        radius * 0.54,
+        colours,
+        seed: 91,
+      );
+      return;
+    }
+
+    _drawRockLobe(
+      canvas,
+      center,
+      radius,
+      colours,
+      seed: body.id.codeUnits.fold<int>(0, (sum, unit) => sum + unit),
+    );
+
+    if (body.id == 'vesta') {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: center + Offset(radius * 0.18, radius * 0.44),
+          width: radius * 0.72,
+          height: radius * 0.42,
+        ),
+        Paint()..color = Colors.black.withValues(alpha: 0.24),
+      );
+    } else if (body.id == 'bennu') {
+      final boulder = Paint()..color = Colors.white.withValues(alpha: 0.13);
+      for (var i = 0; i < 11; i++) {
+        final angle = i * 2.17 + phase * 0.3;
+        final distance = radius * (0.18 + (i % 4) * 0.17);
+        canvas.drawCircle(
+          center + Offset(math.cos(angle), math.sin(angle)) * distance,
+          radius * (0.025 + (i % 3) * 0.012),
+          boulder,
+        );
+      }
+    }
+  }
+
+  void _drawRockLobe(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    List<Color> colours, {
+    required int seed,
+  }) {
     final path = Path();
     for (var i = 0; i < 14; i++) {
       final angle = i / 14 * math.pi * 2;
-      final variation = 0.78 + ((i * 47) % 29) / 100;
+      var variation = 0.76 + ((i * 47 + seed * 13) % 31) / 100;
+      if (body.id == 'bennu') {
+        variation *= 0.86 + 0.22 * math.cos(angle).abs();
+      }
       final point =
           center +
           Offset(math.cos(angle), math.sin(angle)) * radius * variation;
@@ -1083,6 +1231,39 @@ class _BodyPainter extends CustomPainter {
         ).createShader(bounds),
     );
     _drawCraters(canvas, center, radius);
+  }
+
+  void _drawAsteroidField(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    List<Color> colours,
+  ) {
+    final orbit = Rect.fromCenter(
+      center: center,
+      width: radius * 2.5,
+      height: radius * 1.05,
+    );
+    canvas.drawOval(
+      orbit,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(0.7, radius * 0.035)
+        ..color = colours.first.withValues(alpha: 0.22),
+    );
+    for (var i = 0; i < 34; i++) {
+      final angle = i * 2.399 + phase * 0.08;
+      final spread = 0.78 + ((i * 19) % 23) / 100;
+      final point = Offset(
+        center.dx + math.cos(angle) * orbit.width * 0.5 * spread,
+        center.dy + math.sin(angle) * orbit.height * 0.5 * spread,
+      );
+      canvas.drawCircle(
+        point,
+        radius * (i % 7 == 0 ? 0.045 : 0.022),
+        Paint()..color = colours[i % colours.length].withValues(alpha: 0.82),
+      );
+    }
   }
 
   @override

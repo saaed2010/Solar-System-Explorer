@@ -33,6 +33,7 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
   ];
 
   late final AnimationController _orbitController;
+  late final TransformationController _viewportController;
   CelestialBody? _selected;
   Offset _cameraOffset = Offset.zero;
   bool _playing = true;
@@ -46,6 +47,7 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
       vsync: this,
       duration: const Duration(seconds: 34),
     )..repeat();
+    _viewportController = TransformationController();
   }
 
   @override
@@ -64,6 +66,7 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
   @override
   void dispose() {
     _orbitController.dispose();
+    _viewportController.dispose();
     super.dispose();
   }
 
@@ -211,61 +214,82 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
       clipBehavior: Clip.none,
       children: <Widget>[
         Positioned.fill(
-          child: _CameraMotion(
-            offset: _cameraOffset,
-            focused: _selected != null,
-            reducedMotion: _reducedMotion,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                Positioned.fill(
-                  child: RepaintBoundary(
-                    child: CustomPaint(
-                      painter: _SolarOrbitsPainter(
-                        center: center,
-                        maximumRadius: maxRadius,
-                      ),
-                    ),
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: _orbitController,
-                  builder: (context, _) {
-                    final phase = _orbitController.value;
-                    return Stack(
-                      children: <Widget>[
-                        for (var index = 0; index < planets.length; index++)
-                          _orbitingPlanet(
-                            body: planets[index],
-                            index: index,
-                            phase: phase,
-                            center: center,
-                            maximumRadius: maxRadius,
+          child: Semantics(
+            label: 'Interactive Solar System. Pinch to zoom and drag to pan.',
+            child: InteractiveViewer(
+              key: const Key('solar-system-viewport'),
+              transformationController: _viewportController,
+              minScale: 1,
+              maxScale: 3,
+              boundaryMargin: const EdgeInsets.all(56),
+              interactionEndFrictionCoefficient: 0.00012,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: size.width,
+                height: size.height,
+                child: _CameraMotion(
+                  offset: _cameraOffset,
+                  focused: _selected != null,
+                  reducedMotion: _reducedMotion,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: CustomPaint(
+                            painter: _SolarOrbitsPainter(
+                              center: center,
+                              maximumRadius: maxRadius,
+                            ),
                           ),
-                        _comet(phase, size, orbitAreaHeight),
-                      ],
-                    );
-                  },
-                ),
-                Positioned(
-                  left: center.dx - 31,
-                  top: center.dy - 31,
-                  child: _FocusTarget(
-                    selected: _selected == null || _selected?.id == sun.id,
-                    scale: _selected?.id == sun.id ? 1.2 : 1,
-                    label: 'Focus on the Sun',
-                    onTap: () => _focus(sun),
-                    child: Hero(
-                      tag: 'solar-sun',
-                      child: CelestialBodyVisual(
-                        body: sun,
-                        size: 62,
-                        phase: _orbitController.value,
+                        ),
                       ),
-                    ),
+                      AnimatedBuilder(
+                        animation: _orbitController,
+                        builder: (context, _) {
+                          final phase = _orbitController.value;
+                          return Stack(
+                            children: <Widget>[
+                              for (
+                                var index = 0;
+                                index < planets.length;
+                                index++
+                              )
+                                _orbitingPlanet(
+                                  body: planets[index],
+                                  index: index,
+                                  phase: phase,
+                                  center: center,
+                                  maximumRadius: maxRadius,
+                                ),
+                              _comet(phase, size, orbitAreaHeight),
+                            ],
+                          );
+                        },
+                      ),
+                      Positioned(
+                        left: center.dx - 31,
+                        top: center.dy - 31,
+                        child: _FocusTarget(
+                          selected:
+                              _selected == null || _selected?.id == sun.id,
+                          scale: _selected?.id == sun.id ? 1.2 : 1,
+                          label: 'Focus on the Sun',
+                          onTap: () => _focus(sun),
+                          child: Hero(
+                            tag: 'solar-sun',
+                            child: CelestialBodyVisual(
+                              body: sun,
+                              size: 62,
+                              phase: _orbitController.value,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -330,11 +354,12 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
   Widget _comet(double phase, Size size, double orbitAreaHeight) {
     final comet = CelestialCatalog.byId('halley');
     final progress = (phase * 1.35) % 1;
+    final visibility = math.sin(progress * math.pi).clamp(0.0, 1.0);
     return Positioned(
-      left: -12 + progress * (size.width + 4),
-      top: orbitAreaHeight * (0.12 + progress * 0.36),
+      left: size.width * (0.60 + progress * 0.26) - 15,
+      top: orbitAreaHeight * (0.08 + progress * 0.32),
       child: Opacity(
-        opacity: _selected == null ? 0.8 : 0.2,
+        opacity: visibility * (_selected == null ? 0.82 : 0.18),
         child: Transform.rotate(
           angle: 0.45,
           child: CelestialBodyVisual(
