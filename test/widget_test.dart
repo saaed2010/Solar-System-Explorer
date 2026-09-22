@@ -257,4 +257,24 @@ void main() {
     expect(find.text('Earth'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('solar system viewport supports bounded pinch zoom and pan', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const SolarSystemApp());
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final viewport = tester.widget<InteractiveViewer>(
+      find.byKey(const Key('solar-system-viewport')),
+    );
+    expect(viewport.minScale, 1);
+    expect(viewport.maxScale, 3);
+    expect(viewport.panEnabled, isTrue);
+    expect(viewport.scaleEnabled, isTrue);
+  });
 }
