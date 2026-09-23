@@ -39,11 +39,16 @@ class CelestialBodyVisual extends StatelessWidget {
     'titan',
     'enceladus',
     'triton',
+    'vesta',
+    'bennu',
+    'halley',
+    '67p',
   };
 
   @override
   Widget build(BuildContext context) {
     final hasArtwork = _artworkIds.contains(body.id);
+    final artworkExtent = body.id == 'halley' ? size : size * 0.812;
     return Semantics(
       image: true,
       label: 'Rendered view of ${body.name}',
@@ -56,7 +61,7 @@ class CelestialBodyVisual extends StatelessWidget {
                   children: <Widget>[
                     Center(
                       child: SizedBox.square(
-                        dimension: size * 0.812,
+                        dimension: artworkExtent,
                         child: Image.asset(
                           'assets/celestial/${body.id}.png',
                           fit: BoxFit.contain,
@@ -226,8 +231,7 @@ class _ArtworkOverlayPainter extends CustomPainter {
     if (body.id == 'earth' ||
         body.id == 'venus' ||
         body.id == 'uranus' ||
-        body.id == 'neptune' ||
-        body.id == 'titan') {
+        body.id == 'neptune') {
       canvas.drawCircle(
         center,
         radius * 1.012,
