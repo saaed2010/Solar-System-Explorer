@@ -262,7 +262,6 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
                                   center: center,
                                   maximumRadius: maxRadius,
                                 ),
-                              _comet(phase, size, orbitAreaHeight),
                             ],
                           );
                         },
@@ -344,28 +343,6 @@ class _SolarSystemScreenState extends State<SolarSystemScreen>
             body: body,
             size: visualSize,
             phase: (phase * (index + 1) * 0.7) % 1,
-            glow: false,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _comet(double phase, Size size, double orbitAreaHeight) {
-    final comet = CelestialCatalog.byId('halley');
-    final progress = (phase * 1.35) % 1;
-    final visibility = math.sin(progress * math.pi).clamp(0.0, 1.0);
-    return Positioned(
-      left: size.width * (0.60 + progress * 0.26) - 15,
-      top: orbitAreaHeight * (0.08 + progress * 0.32),
-      child: Opacity(
-        opacity: visibility * (_selected == null ? 0.82 : 0.18),
-        child: Transform.rotate(
-          angle: 0.45,
-          child: CelestialBodyVisual(
-            body: comet,
-            size: 30,
-            phase: phase,
             glow: false,
           ),
         ),
